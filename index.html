@@ -517,8 +517,7 @@ const MMR = 0.005;          /* Bybit BTCUSDT tier-1 maintenance margin */
 const API = 'https://api.bybit.com';
 const SYMBOLS = [
   { id: 'BTCUSDT', label: 'BTC' }, { id: 'ETHUSDT', label: 'ETH' }, { id: 'SOLUSDT', label: 'SOL' },
-  { id: 'XRPUSDT', label: 'XRP' }, { id: 'BNBUSDT', label: 'BNB' }, { id: 'DOGEUSDT', label: 'DOGE' },
-  { id: 'LUNCUSDT', label: 'LUNC' }
+  { id: 'XRPUSDT', label: 'XRP' }, { id: 'BNBUSDT', label: 'BNB' }, { id: 'DOGEUSDT', label: 'DOGE' }
 ];
 const sym = () => state.sym;
 const label = (id) => (SYMBOLS.find(s => s.id === id) || { label: id }).label;
