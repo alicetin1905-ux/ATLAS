@@ -62,6 +62,11 @@ header.top{
 .status.err{color:var(--dn);border-color:rgba(246,70,93,.35)}
 #reload{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
 #reload:hover{color:var(--txt);border-color:var(--line2)}
+#watchBtn{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+#watchBtn:hover{color:var(--txt);border-color:var(--line2)}
+#watchBtn.on{color:var(--txt);border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.watch-hint{padding:8px 16px;font-size:11px;color:var(--nt);border-bottom:1px solid var(--line);line-height:1.5}
+.watch-hint:empty{display:none;padding:0;border-bottom:0}
 
 /* ---- layout ---- */
 main{display:grid;gap:12px;padding:12px 16px 28px;grid-template-columns:1fr}
@@ -173,7 +178,10 @@ footer b{color:var(--dim);font-weight:400}
   <div id="tfs"></div>
   <span class="status loading" id="status">starting</span>
   <button id="reload">Refresh all</button>
+  <button id="watchBtn" title="Notify when any coin's verdict crosses into Long or Short, on any timeframe">alerts off</button>
 </header>
+
+<p class="watch-hint" id="watchHint"></p>
 
 <nav id="syms" aria-label="Symbols"></nav>
 
@@ -593,14 +601,16 @@ function sizeFor(equity, bias, entry, stop) {
 }
 
 /* ---------------- scoring engine ---------------- */
-function analyse() {
-  const c = state.candles[ck(sym(), state.tf)];
+function analyse(symbolId, tfId) {
+  if (!symbolId) symbolId = state.sym;
+  if (!tfId) tfId = state.tf;
+  const c = state.candles[ck(symbolId, tfId)];
   if (!c || c.length < 220) return null;
   /* closed candles only — drop the forming bar */
   const k = c.slice(0, -1);
   const i = k.length - 1;
   const close = k.map(x => x.c);
-  const price = state.lives[sym()] || k[i].c;
+  const price = state.lives[symbolId] || k[i].c;
   const sig = [];
   const add = (group, name, value, dir, weight, note) => sig.push({ group, name, value, dir, weight, note });
 
@@ -665,10 +675,10 @@ function analyse() {
     squeeze ? 'coiled — expect expansion, direction unknown' : '');
   const str = structure(k);
   add('Structure', 'Market structure', str.label, str.dir, 6);
-  const vw = vwapAnchored(k, state.tf);
+  const vw = vwapAnchored(k, tfId);
   add('Structure', 'VWAP', `${fmt(vw[i])} · ${price > vw[i] ? 'above' : 'below'}`, price > vw[i] ? 1 : -1, 4);
 
-  const d1 = state.candles[ck(sym(), 'D')];
+  const d1 = state.candles[ck(symbolId, 'D')];
   let piv = null;
   if (d1 && d1.length > 2) {
     const p = d1[d1.length - 2];
@@ -688,8 +698,8 @@ function analyse() {
   const mf = mfi(k, 14);
   add('Flow', 'Money flow 14', mf[i].toFixed(1), mf[i] > 55 ? 1 : mf[i] < 45 ? -1 : 0, 3);
 
-  if (state.tickers[sym()]) {
-    const f = +state.tickers[sym()].fundingRate * 100;
+  if (state.tickers[symbolId]) {
+    const f = +state.tickers[symbolId].fundingRate * 100;
     let fDir = 0, fNote = '';
     if (f > 0.03) { fDir = -1; fNote = 'longs crowded and paying'; }
     else if (f < -0.02) { fDir = 1; fNote = 'shorts crowded and paying'; }
@@ -731,7 +741,7 @@ function analyse() {
 
   /* --- multi timeframe alignment --- */
   const mtf = TFS.map(t => {
-    const cc2 = state.candles[ck(sym(), t.id)];
+    const cc2 = state.candles[ck(symbolId, t.id)];
     if (!cc2 || cc2.length < 210) return { tf: t.label, dir: 0, txt: '—' };
     const kk = cc2.slice(0, -1), j = kk.length - 1, cl = kk.map(x => x.c);
     const a50 = ema(cl, 50)[j], a200 = ema(cl, 200)[j];
@@ -792,8 +802,11 @@ function renderSymbolTabs() {
     const t = state.tickers[x.id];
     const p = state.lives[x.id] || (t ? +t.lastPrice : null);
     const ch = t ? +t.price24hPcnt * 100 : null;
+    /* dot reuses the watcher's own persisted state — free, no extra work —
+       to show at a glance whether any timeframe is Long/Short right now. */
+    const wd = watch.on ? TFS.reduce((d, tf) => d || watch.last[watchKey(x.id, tf.id)] || 0, 0) : 0;
     return `<button data-sym="${x.id}" class="${x.id === sym() ? 'on' : ''}">
-      <b>${x.label}</b>
+      <b>${x.label}${wd ? `<i class="${cls(wd)}">●</i>` : ''}</b>
       <span class="sp">${p === null ? '—' : fmt(p, x.id)}</span>
       <span class="sc ${ch === null ? '' : cls(ch)}">${ch === null ? '' : (ch > 0 ? '+' : '') + ch.toFixed(2) + '%'}</span>
     </button>`;
@@ -877,14 +890,21 @@ function paintHeader() {
   startCountdown(+t.nextFundingTime);
 }
 
+/* Same thresholds the big verdict badge uses, shared with the background
+   watcher so its alerts say exactly what the badge would say. */
+function verdictLabel(s) {
+  return s >= 45 ? 'Strong long' : s >= 25 ? 'Long' : s <= -45 ? 'Strong short' : s <= -25 ? 'Short' : 'Stand aside';
+}
+function verdictDir(s) { return s >= 25 ? 1 : s <= -25 ? -1 : 0; }
+
 function render(a) {
   paintHeader();
   if (!a) return;
 
   /* verdict */
   const s = a.score;
-  const verdict = s >= 45 ? 'Strong long' : s >= 25 ? 'Long' : s <= -45 ? 'Strong short' : s <= -25 ? 'Short' : 'Stand aside';
-  const vd = s >= 25 ? 1 : s <= -25 ? -1 : 0;
+  const verdict = verdictLabel(s);
+  const vd = verdictDir(s);
   el('verdict').textContent = verdict;
   el('verdict').className = 'verdict ' + cls(vd);
   el('scoreNum').textContent = (s > 0 ? '+' : '') + s;
@@ -987,6 +1007,102 @@ function startCountdown(next) {
   tick(); cdTimer = setInterval(tick, 1000);
 }
 
+/* ---------------- background signal watcher ----------------
+   Scans every symbol × timeframe combination — not just the one on screen —
+   and fires a real notification the moment a combo's main verdict crosses
+   into Long or Short. Edge-triggered off the last-seen direction, which is
+   persisted, so reopening the app doesn't re-fire for combos that were
+   already Long/Short before the reload. */
+const WATCH_KEY = 'atlas-watch-v1';
+const watch = { on: false, sys: false, last: {} };
+const watchKey = (s, t) => `${s}:${t}`;
+
+function watchLoad() {
+  try {
+    const j = JSON.parse(localStorage.getItem(WATCH_KEY) || '{}');
+    if (typeof j.on === 'boolean') watch.on = j.on;
+    if (j.last && typeof j.last === 'object') watch.last = j.last;
+  } catch (e) {}
+  watch.sys = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+function watchSave() {
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify({ on: watch.on, last: watch.last })); } catch (e) {}
+}
+
+function fireWatch(symbolId, tfId, score) {
+  if (!watch.sys) return;
+  const tfLabel = (TFS.find(t => t.id === tfId) || {}).label || tfId;
+  const title = `ATLAS — ${label(symbolId)} ${tfLabel}`;
+  const body = `${verdictLabel(score)} · score ${score > 0 ? '+' : ''}${score}`;
+  try { new Notification(title, { body, tag: 'atlas-' + watchKey(symbolId, tfId), renotify: false }); }
+  catch (e) {}
+}
+
+/* Fetches every symbol/timeframe's candles fresh on its own schedule,
+   independent of whatever is on screen, then scores each with the exact
+   same analyse() the verdict badge uses. */
+let watchBusy = false;
+async function scanAll() {
+  if (!watch.on || watchBusy) return;   /* never let scans stack if one runs long */
+  watchBusy = true;
+  try {
+    await scanAllOnce();
+  } finally {
+    watchBusy = false;
+  }
+}
+async function scanAllOnce() {
+  const jobs = [];
+  SYMBOLS.forEach(x => TFS.forEach(t => {
+    jobs.push(getKlines(x.id, t.id, t.id === 'D' ? 400 : 500)
+      .then(k => { state.candles[ck(x.id, t.id)] = k; })
+      .catch(() => { /* keep whatever was cached; try again next scan */ }));
+  }));
+  await Promise.all(jobs);
+
+  SYMBOLS.forEach(x => TFS.forEach(t => {
+    const a = analyse(x.id, t.id);
+    if (!a) return;
+    const bias = verdictDir(a.score);
+    const key = watchKey(x.id, t.id);
+    const prev = watch.last[key] || 0;
+    if (bias !== 0 && bias !== prev) fireWatch(x.id, t.id, a.score);
+    watch.last[key] = bias;
+  }));
+  watchSave();
+  renderSymbolTabs();   /* the long/short dot on each tab reads watch.last */
+}
+
+function paintWatchUi() {
+  const b = el('watchBtn');
+  b.classList.toggle('on', watch.on);
+  b.textContent = watch.on ? 'alerts on' : 'alerts off';
+  const hint = el('watchHint');
+  if (!watch.on) { hint.textContent = ''; return; }
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (!watch.sys) {
+    hint.textContent = iOS && !standalone
+      ? 'No system notifications in a plain Safari tab — add this to the Home Screen and open it from there to get real alerts.'
+      : 'System notifications are blocked or not permitted in this browser.';
+  } else {
+    hint.textContent = `Watching ${SYMBOLS.length} coins × ${TFS.length} timeframes — a notification fires the moment any one crosses into Long or Short.`;
+  }
+}
+
+async function toggleWatch() {
+  if (watch.on) { watch.on = false; watchSave(); paintWatchUi(); return; }
+  watch.on = true;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch (e) {}
+  }
+  watch.sys = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  watchSave();
+  paintWatchUi();
+  scanAll();
+}
+
 /* ---------------- refresh loop ---------------- */
 async function refresh(full) {
   if (state.busy) return;
@@ -1083,6 +1199,9 @@ function switchSymbol(id) {
 
 /* ---------------- boot ---------------- */
 function boot() {
+  watchLoad();
+  paintWatchUi();
+  el('watchBtn').addEventListener('click', toggleWatch);
   renderSymbolTabs();
   el('syms').addEventListener('click', e => {
     const b = e.target.closest('button'); if (b) switchSymbol(b.dataset.sym);
@@ -1120,6 +1239,9 @@ function boot() {
   refresh(true);
   setInterval(() => refresh(false), 20000);
   setInterval(() => refresh(true), 300000);
+
+  if (watch.on) setTimeout(scanAll, 4000);   /* stagger past the initial page load */
+  setInterval(scanAll, 60000);
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', boot) : boot();
 })();
