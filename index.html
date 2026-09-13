@@ -11,12 +11,32 @@
   --bg:#070a0f; --panel:#0d131b; --panel2:#111925; --line:#1a2534; --line2:#243244;
   --txt:#d7e1ee; --dim:#78889d; --faint:#4e5c6e;
   --up:#0ecb81; --dn:#f6465d; --nt:#f0b90b; --blue:#4d9fff;
+  --signal-soft: rgba(240,185,11,0.08);
   --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
 }
+body.state-long{ --signal-soft: rgba(14,203,129,0.10); }
+body.state-short{ --signal-soft: rgba(246,70,93,0.10); }
+body.state-flat{ --signal-soft: rgba(240,185,11,0.08); }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
-body{padding:0 0 env(safe-area-inset-bottom)}
+body{padding:0 0 env(safe-area-inset-bottom);position:relative}
+
+/* ambient aurora wash — same soft top/bottom glow + scanline texture as
+   BTCLiveBoard, shifting colour with the current verdict (see render()).
+   Fixed + negative z-index so it sits behind everything without needing
+   every element re-tagged. */
+.wash{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 130% 80% at 50% -10%, var(--signal-soft), transparent 60%),
+    radial-gradient(ellipse 120% 70% at 50% 110%, var(--signal-soft), transparent 62%);
+  transition:background 1.4s ease;
+}
+.scanlines{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0.5;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,0.014) 0 1px, transparent 1px 3px);
+}
 .up{color:var(--up)} .dn{color:var(--dn)} .nt{color:var(--nt)}
 b,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
@@ -163,6 +183,8 @@ footer b{color:var(--dim);font-weight:400}
 </style>
 </head>
 <body>
+<div class="wash"></div>
+<div class="scanlines"></div>
 
 <header class="top">
   <div class="mark"><h1>ATLAS</h1><span id="symName">BTCUSDT.P</span></div>
@@ -905,6 +927,7 @@ function render(a) {
   const s = a.score;
   const verdict = verdictLabel(s);
   const vd = verdictDir(s);
+  document.body.className = vd === 1 ? 'state-long' : vd === -1 ? 'state-short' : 'state-flat';
   el('verdict').textContent = verdict;
   el('verdict').className = 'verdict ' + cls(vd);
   el('scoreNum').textContent = (s > 0 ? '+' : '') + s;
