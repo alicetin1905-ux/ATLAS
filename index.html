@@ -1034,8 +1034,28 @@ function fireWatch(symbolId, tfId, score) {
   const tfLabel = (TFS.find(t => t.id === tfId) || {}).label || tfId;
   const title = `ATLAS — ${label(symbolId)} ${tfLabel}`;
   const body = `${verdictLabel(score)} · score ${score > 0 ? '+' : ''}${score}`;
-  try { new Notification(title, { body, tag: 'atlas-' + watchKey(symbolId, tfId), renotify: false }); }
-  catch (e) {}
+  try {
+    const n = new Notification(title, { body, tag: 'atlas-' + watchKey(symbolId, tfId), renotify: false });
+    /* Tapping the notification runs in THIS page's own JS context — it only
+       fires if the app is still alive somewhere (open tab, or a backgrounded
+       PWA iOS hasn't evicted yet), same condition already required for the
+       alert to have fired in the first place. There is no service worker
+       here, so a notification tapped after the app was fully closed in the
+       meantime falls back to a normal cold launch with no deep link — that
+       would need Web Push + a push server, well beyond a static Pages site. */
+    n.onclick = () => {
+      try { window.focus(); } catch (e) {}
+      /* ATLAS runs inside the hub's iframe most of the time, but is also a
+         real page on its own (e.g. "Open in Safari") — only tell a parent
+         to switch tabs if one actually exists and isn't just this window. */
+      if (window.self !== window.top) {
+        try { window.parent.postMessage({ type: 'atlas-goto', symbolId, tfId }, location.origin); }
+        catch (e) {}
+      }
+      switchSymbol(symbolId, tfId);
+      n.close();
+    };
+  } catch (e) {}
 }
 
 /* Fetches every symbol/timeframe's candles fresh on its own schedule,
@@ -1184,9 +1204,17 @@ function connectWs() {
 }
 
 
-function switchSymbol(id) {
-  if (id === state.sym) return;
+/* tfId is optional — pass it (e.g. from a notification tap) to jump straight
+   to that timeframe at the same time as the symbol, in one refresh. */
+function switchSymbol(id, tfId) {
+  const symChanged = id !== state.sym;
+  const tfChanged = tfId !== undefined && tfId !== state.tf;
+  if (!symChanged && !tfChanged) return;
   state.sym = id;
+  if (tfChanged) {
+    state.tf = tfId;
+    [...el('tfs').children].forEach(x => x.classList.toggle('on', x.dataset.tf === tfId));
+  }
   state.oi = []; state.book = null; state.tape = null; state.ratio = null;
   renderSymbolTabs();
   el('symName').textContent = label(id) + 'USDT.P';
