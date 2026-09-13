@@ -152,48 +152,6 @@ main{display:grid;gap:12px;padding:12px 16px 28px;grid-template-columns:1fr}
 .pstats div{display:flex;flex-direction:column;gap:3px}
 .pstats span{font-size:10px;color:var(--faint)}
 .pstats b{font-size:13px;font-family:var(--mono);font-weight:500}
-.trades{border-top:1px solid var(--line);max-height:250px;overflow-y:auto}
-.trade{display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:baseline;padding:8px 14px;
-  border-bottom:1px solid rgba(26,37,52,.6);font-size:11.5px}
-.trade:last-child{border-bottom:0}
-.trade span{font-size:11px}
-.trade b{font-family:var(--mono);font-size:11px;font-weight:500}
-.trade em{font-style:normal;font-size:10.5px;color:var(--faint);grid-column:2;margin-top:2px}
-@media(max-width:1119px){.pstats{grid-template-columns:repeat(2,1fr)}}
-.card h2 .sub{color:var(--faint);font-weight:400;margin-left:7px}
-.ticket{border-top:1px solid var(--line);padding-bottom:4px}
-.modes.tight button{padding:7px}
-.pcts{display:flex;align-items:center;gap:6px;padding:2px 14px 10px;flex-wrap:wrap}
-.pcts span{font-size:10px;color:var(--faint);margin-right:auto}
-.pcts button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;
-  font:inherit;font-size:11px;padding:5px 11px;cursor:pointer}
-.pcts button.on{color:var(--txt);border-color:var(--blue)}
-.dsize{padding:0 14px 11px;font-size:11.5px;font-family:var(--mono);color:var(--dim)}
-.sides{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px 11px}
-.sides button{border:0;border-radius:7px;padding:12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#04120c}
-.sides .buy{background:var(--up)} .sides .sell{background:var(--dn);color:#1a0407}
-.sides button:active{filter:brightness(.9)}
-.desk-msg{min-height:16px;padding:0 14px 10px;font-size:11.5px;color:var(--dim)}
-.desk-msg.bad{color:var(--dn)} .desk-msg.good{color:var(--up)}
-.flat{padding:14px;font-size:12px;color:var(--faint)}
-.pos{padding:12px 14px;border-top:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(77,159,255,.05),transparent)}
-.pos-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
-.pos .side{font-size:13px;font-weight:600}
-.pos .pnl{font-family:var(--mono);font-size:14px}
-.pos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.pos-grid div{display:flex;flex-direction:column;gap:3px}
-.pos-grid span{font-size:10px;color:var(--faint)}
-.pos-grid b{font-size:12px;font-family:var(--mono);font-weight:500}
-.pos-acts{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
-.pos-acts button,#dReset{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
-  border-radius:6px;font:inherit;font-size:11.5px;padding:7px 11px;cursor:pointer}
-.pos-acts button:hover,#dReset:hover{color:var(--txt);border-color:var(--line2)}
-.ord{display:flex;align-items:center;gap:9px;padding:9px 14px;border-top:1px solid var(--line);font-size:11.5px}
-.ord b{font-family:var(--mono);font-size:11.5px;flex:1}
-.ord button{background:none;border:1px solid var(--line);color:var(--dim);border-radius:5px;
-  font:inherit;font-size:11px;padding:3px 9px;cursor:pointer}
-@media(max-width:1119px){.pos-grid{grid-template-columns:repeat(2,1fr)}}
 footer{padding:0 16px 26px;font-size:11px;color:var(--faint);line-height:1.6;max-width:70ch}
 footer b{color:var(--dim);font-weight:400}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -280,42 +238,6 @@ footer b{color:var(--dim);font-weight:400}
     </div>
   </div>
 
-    <div class="card" id="deskCard" style="margin-top:12px">
-      <h2>Manual desk <span class="sub">isolated margin · one-way</span></h2>
-      <div class="pstats" id="deskWallet"></div>
-      <div id="deskPos"></div>
-      <div id="deskOther"></div>
-      <div id="deskOrders"></div>
-      <div class="ticket">
-        <div class="modes tight">
-          <button data-type="market" class="on">Market</button>
-          <button data-type="limit">Limit</button>
-        </div>
-        <div class="riskbar">
-          <label id="dLimitWrap" style="display:none">Limit price<input id="dLimit" type="number" step="1" inputmode="decimal" placeholder="price"></label>
-          <label>Leverage (x)<input id="dLev" type="number" value="10" min="1" max="100" step="1" inputmode="numeric"></label>
-          <label>Stop loss<input id="dSl" type="number" step="1" inputmode="decimal" placeholder="optional"></label>
-          <label>Take profit<input id="dTp" type="number" step="1" inputmode="decimal" placeholder="optional"></label>
-        </div>
-        <div class="pcts">
-          <span>Margin to use</span>
-          <button data-pct="25" class="on">25%</button>
-          <button data-pct="50">50%</button>
-          <button data-pct="75">75%</button>
-          <button data-pct="100">100%</button>
-        </div>
-        <div class="dsize" id="dSize">—</div>
-        <div class="sides">
-          <button data-side="long" class="buy">Buy / Long</button>
-          <button data-side="short" class="sell">Sell / Short</button>
-        </div>
-        <div class="desk-msg" id="deskMsg"></div>
-      </div>
-      <div class="pstats" id="deskStats"></div>
-      <div class="trades" id="deskHistory"></div>
-      <div class="riskbar" style="justify-content:flex-end"><button id="dReset">Reset desk</button></div>
-      <p class="plan-note">Fills are simulated at the price shown, taker 0.055% and maker 0.02%, with funding settled every 8 hours at the live rate. Stops, targets and liquidation are checked on every price tick. State is saved in this browser only.</p>
-    </div>
 
 </main>
 
@@ -583,161 +505,6 @@ function structure(c) {
 
 const MMR = 0.005;          /* Bybit BTCUSDT tier-1 maintenance margin */
 
-/* ---------------- manual paper trading desk ----------------
-   Isolated margin, one-way mode, one position at a time — same model Bybit uses.
-   Pure functions on a desk object so the maths can be tested outside the browser. */
-const TAKER_FEE = 0.00055, MAKER_FEE = 0.0002;
-
-function newDesk(balance) {
-  return { balance, start: balance, positions: {}, orders: [], history: [], nextId: 1 };
-}
-const posOf = (desk, symbol) => desk.positions[symbol] || null;
-function liqPrice(entry, lev, dir) {
-  return dir === 1 ? entry * (1 - 1 / lev + MMR) : entry * (1 + 1 / lev - MMR);
-}
-/* marks is a map of symbol -> price; unrealised pnl spans every open position */
-function deskEquity(desk, marks) {
-  return desk.balance + Object.entries(desk.positions).reduce((s, [k, p]) =>
-    s + (marks[k] ? (marks[k] - p.entry) * p.qty * p.dir : 0), 0);
-}
-function deskUsed(desk) {
-  return Object.values(desk.positions).reduce((s, p) => s + p.margin, 0);
-}
-function deskAvailable(desk) { return desk.balance - deskUsed(desk); }
-function deskUnreal(desk, marks) { return deskEquity(desk, marks) - desk.balance; }
-
-/* fill a market or limit order; returns a note describing what happened */
-function deskFill(desk, o) {
-  const { dir, price, lev } = o;
-  const symbol = o.symbol;
-  const fee = o.maker ? MAKER_FEE : TAKER_FEE;
-  let qty = o.qty;
-  if (qty <= 0) return { ok: false, msg: 'Size is zero.' };
-
-  const p = posOf(desk, symbol);
-  let msg = '';
-  if (p && p.dir !== dir) {                       /* opposite side reduces, then flips */
-    const closeQty = Math.min(p.qty, qty);
-    deskExit(desk, symbol, price, closeQty / p.qty, 'manual close', fee);
-    qty -= closeQty;
-    msg = 'Reduced position. ';
-    if (qty <= 1e-12) return { ok: true, msg: msg.trim() };
-  }
-
-  const cost = qty * price;
-  const margin = cost / lev;
-  const feePaid = cost * fee;
-  const cur = posOf(desk, symbol);
-  const free = deskAvailable(desk);
-  if (margin + feePaid > free + 1e-9) return { ok: false, msg: `Not enough margin: needs $${(margin + feePaid).toFixed(2)}, free $${Math.max(0, free).toFixed(2)}.` };
-
-  desk.balance -= feePaid;
-  if (cur && cur.dir === dir) {                   /* average into the existing position */
-    const q = cur.qty + qty;
-    cur.entry = (cur.entry * cur.qty + price * qty) / q;
-    cur.qty = q;
-    cur.margin = cur.qty * cur.entry / cur.lev;
-    cur.liq = liqPrice(cur.entry, cur.lev, dir);
-    cur.fees += feePaid;
-    msg += 'Added to position.';
-  } else {
-    desk.positions[symbol] = {
-      id: desk.nextId++, symbol, dir, qty, entry: price, lev, margin,
-      liq: liqPrice(price, lev, dir), tp: o.tp || null, sl: o.sl || null,
-      opened: Date.now(), fees: feePaid, funding: 0
-    };
-    msg += dir === 1 ? 'Long opened.' : 'Short opened.';
-  }
-  return { ok: true, msg };
-}
-
-/* close all or part of the position */
-function deskExit(desk, symbol, price, frac, reason, fee) {
-  const p = posOf(desk, symbol);
-  if (!p) return null;
-  frac = Math.min(1, Math.max(0, frac));
-  const qty = p.qty * frac;
-  if (qty <= 0) return null;
-  const feeRate = fee === undefined ? TAKER_FEE : fee;
-  const gross = (price - p.entry) * qty * p.dir;
-  const exitFee = qty * price * feeRate;
-  const entryFeeShare = p.fees * frac;          /* already taken out of balance at fill */
-  /* a liquidation forfeits the posted margin; nothing else is returned */
-  const cash = reason === 'liquidated' ? -p.margin * frac : gross - exitFee;
-  desk.balance += cash;
-  if (desk.balance < 0) desk.balance = 0;
-  const net = cash - entryFeeShare;             /* what the trade really cost, fees both sides */
-  const rec = {
-    id: p.id, symbol, dir: p.dir, qty, entry: p.entry, exit: price, reason,
-    pnl: net,
-    roe: p.margin > 0 ? (net / (p.margin * frac)) * 100 : 0,
-    lev: p.lev, closed: Date.now(), funding: p.funding * frac
-  };
-  desk.history.unshift(rec);
-  if (frac >= 1 - 1e-9) delete desk.positions[symbol];
-  else {
-    p.qty -= qty; p.margin = p.qty * p.entry / p.lev; p.fees *= (1 - frac); p.funding *= (1 - frac);
-  }
-  return rec;
-}
-
-/* run every price tick: pending limits, then stop loss, take profit, liquidation */
-/* runs across every symbol, so a position liquidates even while you're on another tab */
-function deskTick(desk, marks) {
-  const events = [];
-  for (let i = desk.orders.length - 1; i >= 0; i--) {
-    const o = desk.orders[i];
-    const price = marks[o.symbol];
-    if (!price) continue;
-    if (o.dir === 1 ? price <= o.price : price >= o.price) {
-      desk.orders.splice(i, 1);
-      const r = deskFill(desk, { ...o, price: o.price, maker: true });
-      events.push({ type: 'fill', symbol: o.symbol, msg: `${o.symbol} limit ${o.dir === 1 ? 'buy' : 'sell'} filled. ${r.msg}` });
-    }
-  }
-  for (const [symbol, p] of Object.entries(desk.positions)) {
-    const price = marks[symbol];
-    if (!price) continue;
-    const through = (lvl) => p.dir === 1 ? price <= lvl : price >= lvl;
-    /* whichever protective level sits nearer the entry is reached first */
-    const slFirst = !p.sl ? false : (p.dir === 1 ? p.sl >= p.liq : p.sl <= p.liq);
-    if (p.sl && through(p.sl) && (slFirst || !through(p.liq))) {
-      deskExit(desk, symbol, p.sl, 1, 'stop loss');
-      events.push({ type: 'sl', symbol, msg: `${symbol} stop loss hit.` });
-    } else if (through(p.liq)) {
-      deskExit(desk, symbol, p.liq, 1, 'liquidated');
-      events.push({ type: 'liq', symbol, msg: `${symbol} position liquidated.` });
-    } else if (p.tp && (p.dir === 1 ? price >= p.tp : price <= p.tp)) {
-      deskExit(desk, symbol, p.tp, 1, 'take profit');
-      events.push({ type: 'tp', symbol, msg: `${symbol} take profit hit.` });
-    }
-  }
-  return events;
-}
-
-/* funding settles every 8h: longs pay a positive rate, shorts receive it */
-function deskFunding(desk, symbol, rate, mark) {
-  const p = posOf(desk, symbol);
-  if (!p) return 0;
-  const pay = p.qty * mark * rate * p.dir;
-  desk.balance -= pay;
-  p.funding -= pay;
-  return -pay;
-}
-
-function deskStats(desk) {
-  const h = desk.history, wins = h.filter(t => t.pnl > 0), losses = h.filter(t => t.pnl <= 0);
-  const gw = wins.reduce((s, t) => s + t.pnl, 0), gl = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-  return {
-    n: h.length, wr: h.length ? wins.length / h.length * 100 : 0,
-    pf: gl > 0 ? gw / gl : (gw > 0 ? Infinity : 0),
-    net: h.reduce((s, t) => s + t.pnl, 0),
-    best: h.reduce((m, t) => Math.max(m, t.pnl), 0),
-    worst: h.reduce((m, t) => Math.min(m, t.pnl), 0),
-    liqs: h.filter(t => t.reason === 'liquidated').length
-  };
-}
-
 /* ---------------- data layer ---------------- */
 const API = 'https://api.bybit.com';
 const SYMBOLS = [
@@ -772,8 +539,7 @@ const state = {
   candles: {},                       /* keyed `${symbol}:${tf}` */
   tickers: {}, insts: {}, lives: {},  /* keyed by symbol */
   oi: [], book: null, tape: null, ratio: null,
-  lastUpdate: null, busy: false, account: 1000, riskPct: 1, lev: 10, mode: 'full',
-  desk: null, deskPct: 25, deskType: 'market'
+  lastUpdate: null, busy: false, account: 1000, riskPct: 1, lev: 10, mode: 'full'
 };
 const ck = (s, t) => `${s}:${t}`;
 
@@ -791,7 +557,7 @@ async function getKlines(symbol, interval, limit) {
 }
 
 /* ---------------- position sizing ----------------
-   Shared by the plan panel and the manual desk's "from plan" button. */
+   Used by the plan panel. */
 const TAKER = 0.00055;      /* taker fee per side */
 function sizeFor(equity, bias, entry, stop) {
   const risk = Math.abs(entry - stop);
@@ -1026,9 +792,8 @@ function renderSymbolTabs() {
     const t = state.tickers[x.id];
     const p = state.lives[x.id] || (t ? +t.lastPrice : null);
     const ch = t ? +t.price24hPcnt * 100 : null;
-    const pos = state.desk ? posOf(state.desk, x.id) : null;
     return `<button data-sym="${x.id}" class="${x.id === sym() ? 'on' : ''}">
-      <b>${x.label}${pos ? `<i class="${cls(pos.dir)}">●</i>` : ''}</b>
+      <b>${x.label}</b>
       <span class="sp">${p === null ? '—' : fmt(p, x.id)}</span>
       <span class="sc ${ch === null ? '' : cls(ch)}">${ch === null ? '' : (ch > 0 ? '+' : '') + ch.toFixed(2) + '%'}</span>
     </button>`;
@@ -1258,24 +1023,9 @@ async function refresh(full) {
       jobs.push(getKlines(S, state.tf, 500).then(k => { state.candles[ck(S, state.tf)] = k; }));
     }
     await Promise.all(jobs);
-    /* settle funding on every open position when its window rolls over */
-    if (state.desk) {
-      state.fundingSeen = state.fundingSeen || {};
-      SYMBOLS.forEach(x => {
-        const t = state.tickers[x.id]; if (!t) return;
-        const nf = +t.nextFundingTime;
-        if (state.fundingSeen[x.id] && nf > state.fundingSeen[x.id] && state.desk.positions[x.id]) {
-          const paid = deskFunding(state.desk, x.id, +t.fundingRate, state.lives[x.id] || +t.lastPrice);
-          deskNote(`${label(x.id)} funding: ${paid >= 0 ? 'received' : 'paid'} $${Math.abs(paid).toFixed(2)}.`, paid < 0);
-          saveDesk();
-        }
-        state.fundingSeen[x.id] = nf;
-      });
-    }
     const a = analyse();
     render(a);
     if (a && !state.noChart) { try { paintChart(a); } catch (e) { state.noChart = true; } }
-    if (state.desk) renderDesk();
     renderSymbolTabs();
     state.lastUpdate = Date.now();
     el('status').className = 'status ok';
@@ -1310,7 +1060,6 @@ function connectWs() {
         e.className = 'price ' + state.flash;
       }
       renderSymbolTabs();
-      deskOnPrice();
     };
     ws.onclose = () => setTimeout(open, 4000);
     ws.onerror = () => ws.close();
@@ -1319,214 +1068,6 @@ function connectWs() {
 }
 
 
-/* ---------------- manual desk: storage + ui ---------------- */
-const DESK_KEY = 'atlas-desk-v1';
-const store = {
-  async get(k) {
-    try {
-      if (typeof window !== 'undefined' && window.storage) { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; }
-      const v = window.localStorage.getItem(k); return v ? JSON.parse(v) : null;
-    } catch (e) { return null; }
-  },
-  async set(k, v) {
-    try {
-      if (typeof window !== 'undefined' && window.storage) { await window.storage.set(k, JSON.stringify(v)); return; }
-      window.localStorage.setItem(k, JSON.stringify(v));
-    } catch (e) { /* memory only — the session still works */ }
-  }
-};
-let saveTimer;
-function saveDesk() { clearTimeout(saveTimer); saveTimer = setTimeout(() => store.set(DESK_KEY, state.desk), 400); }
-
-function deskPrice(id) {
-  const s = id || sym();
-  return state.lives[s] || (state.tickers[s] ? +state.tickers[s].lastPrice : 0);
-}
-const allMarks = () => {
-  const m = {};
-  SYMBOLS.forEach(x => { const p = deskPrice(x.id); if (p) m[x.id] = p; });
-  return m;
-};
-function deskNote(msg, bad) {
-  const n = el('deskMsg');
-  n.textContent = msg; n.className = 'desk-msg ' + (bad ? 'bad' : 'good');
-  clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ''; n.className = 'desk-msg'; }, 5000);
-}
-
-/* size the ticket from the % of free margin the user picked */
-function ticketQty(price) {
-  const d = state.desk, lev = +el('dLev').value || 10;
-  const inst = state.insts[sym()];
-  const step = inst ? +inst.qtyStep : 0.001;
-  const free = Math.max(0, deskAvailable(d));
-  const margin = free * (state.deskPct / 100);
-  const qty = Math.floor(margin * lev / price / step + 1e-9) * step;
-  return { qty, lev, margin: qty * price / lev, notional: qty * price, step };
-}
-
-function renderTicket() {
-  const price = deskPrice(); if (!price) return;
-  const t = ticketQty(price);
-  const inst = state.insts[sym()];
-  const minQty = inst ? +inst.minOrderQty : 0.001;
-  el('dSize').innerHTML = `${t.qty.toFixed(qtyDp(sym()))} ${label(sym())} · $${fmt0(t.notional)} notional · $${fmt0(t.margin)} margin`
-    + (t.qty < minQty ? ` <span class="dn">— under the ${minQty} minimum</span>` : '');
-}
-
-function renderDesk() {
-  const d = state.desk; if (!d) return;
-  const marks = allMarks(), price = deskPrice();
-  const eq = deskEquity(d, marks), st = deskStats(d);
-  const qd = qtyDp(sym());
-  el('deskWallet').innerHTML = `
-    <div><span>Equity</span><b class="${eq >= d.start ? 'up' : 'dn'}">$${eq.toFixed(2)}</b></div>
-    <div><span>Balance</span><b>$${d.balance.toFixed(2)}</b></div>
-    <div><span>Used margin</span><b>$${deskUsed(d).toFixed(2)}</b></div>
-    <div><span>Available</span><b>$${Math.max(0, deskAvailable(d)).toFixed(2)}</b></div>`;
-
-  const p = posOf(d, sym());
-  /* positions on other tabs stay visible and stay live */
-  const others = Object.values(d.positions).filter(x => x.symbol !== sym());
-  el('deskOther').innerHTML = !others.length ? '' : others.map(o => {
-    const mk = marks[o.symbol] || o.entry;
-    const up = (mk - o.entry) * o.qty * o.dir;
-    return `<button class="other" data-goto="${o.symbol}">
-      <span class="${cls(o.dir)}">${label(o.symbol)} ${o.dir === 1 ? 'long' : 'short'} ${o.lev}x</span>
-      <b class="${up >= 0 ? 'up' : 'dn'}">${money(up)}</b></button>`;
-  }).join('');
-  el('deskPos').innerHTML = !p ? `<div class="flat">No open ${label(sym())} position.</div>` : (() => {
-    const up = (price - p.entry) * p.qty * p.dir;
-    const roe = p.margin > 0 ? up / p.margin * 100 : 0;
-    const liqAway = Math.abs(price - p.liq) / price * 100;
-    return `<div class="pos ${p.dir === 1 ? 'long' : 'short'}">
-      <div class="pos-top">
-        <span class="side ${cls(p.dir)}">${label(sym())} ${p.dir === 1 ? 'long' : 'short'} ${p.lev}x</span>
-        <span class="pnl ${up >= 0 ? 'up' : 'dn'}">${money(up)} · ${pct(roe)}</span>
-      </div>
-      <div class="pos-grid">
-        <div><span>Size</span><b>${p.qty.toFixed(qd)} ${label(sym())}</b></div>
-        <div><span>Entry</span><b>${fmt(p.entry)}</b></div>
-        <div><span>Mark</span><b>${fmt(price)}</b></div>
-        <div><span>Margin</span><b>$${p.margin.toFixed(2)}</b></div>
-        <div><span>Liquidation</span><b class="dn">${fmt(p.liq)} · ${liqAway.toFixed(1)}%</b></div>
-        <div><span>Funding paid</span><b class="${p.funding >= 0 ? 'up' : 'dn'}">$${p.funding.toFixed(2)}</b></div>
-        <div><span>Stop loss</span><b>${p.sl ? fmt(p.sl) : '—'}</b></div>
-        <div><span>Take profit</span><b>${p.tp ? fmt(p.tp) : '—'}</b></div>
-      </div>
-      <div class="pos-acts">
-        <button data-act="close">Close</button>
-        <button data-act="half">Close 50%</button>
-        <button data-act="be">Stop to entry</button>
-        <button data-act="plan">Stop &amp; target from plan</button>
-      </div>
-    </div>`;
-  })();
-
-  el('deskOrders').innerHTML = d.orders.length ? d.orders.map((o, i) => `
-    <div class="ord"><span class="${cls(o.dir)}">${o.dir === 1 ? 'Buy' : 'Sell'} limit</span>
-      <b>${label(o.symbol)} ${o.qty.toFixed(qtyDp(o.symbol))} @ ${fmt(o.price, o.symbol)}</b>
-      <button data-cancel="${i}">Cancel</button></div>`).join('') : '';
-
-  el('deskStats').innerHTML = !st.n ? '' : `
-    <div><span>Trades</span><b>${st.n}</b></div>
-    <div><span>Win rate</span><b>${st.wr.toFixed(0)}%</b></div>
-    <div><span>Profit factor</span><b>${isFinite(st.pf) ? st.pf.toFixed(2) : '∞'}</b></div>
-    <div><span>Net</span><b class="${st.net >= 0 ? 'up' : 'dn'}">${money(st.net)}</b></div>
-    <div><span>Best</span><b class="up">${money(st.best)}</b></div>
-    <div><span>Worst</span><b class="dn">${money(st.worst)}</b></div>
-    <div><span>Liquidations</span><b class="${st.liqs ? 'dn' : ''}">${st.liqs}</b></div>
-    <div><span>Return</span><b class="${eq >= d.start ? 'up' : 'dn'}">${((eq / d.start - 1) * 100).toFixed(1)}%</b></div>`;
-
-  el('deskHistory').innerHTML = d.history.slice(0, 15).map(t => `
-    <div class="trade">
-      <span class="${cls(t.dir)}">${t.dir === 1 ? 'Long' : 'Short'}</span>
-      <b>${fmt(t.entry, t.symbol)} → ${fmt(t.exit, t.symbol)}</b>
-      <em>${label(t.symbol || 'BTCUSDT')} · ${t.reason} · ${t.lev}x</em>
-      <b class="${t.pnl >= 0 ? 'up' : 'dn'}">${money(t.pnl)} · ${pct(t.roe, 0)}</b>
-    </div>`).join('');
-  renderTicket();
-  renderSymbolTabs();
-}
-
-/* price ticks drive stops, targets, liquidations and resting limits */
-function deskOnPrice() {
-  if (!state.desk) return;
-  const ev = deskTick(state.desk, allMarks());
-  if (ev.length) { ev.forEach(e => deskNote(e.msg, e.type === 'liq' || e.type === 'sl')); saveDesk(); }
-  if (el('deskPos')) renderDesk();
-}
-
-function submitOrder(dir) {
-  const d = state.desk, price = deskPrice();
-  if (!price) return deskNote('No price yet.', true);
-  const limitPx = +el('dLimit').value || 0;
-  const px = state.deskType === 'limit' && limitPx > 0 ? limitPx : price;
-  const t = ticketQty(px);
-  const inst = state.insts[sym()];
-  const minQty = inst ? +inst.minOrderQty : 0.001;
-  if (t.qty < minQty) return deskNote(`Size is under the ${minQty} ${label(sym())} minimum. Raise the % or the leverage.`, true);
-  const tp = +el('dTp').value || null, sl = +el('dSl').value || null;
-  if (state.deskType === 'limit' && limitPx > 0) {
-    d.orders.push({ symbol: sym(), dir, price: limitPx, qty: t.qty, lev: t.lev, tp, sl });
-    deskNote(`${label(sym())} limit ${dir === 1 ? 'buy' : 'sell'} resting at ${fmt(limitPx)}.`);
-  } else {
-    const r = deskFill(d, { symbol: sym(), dir, price: px, qty: t.qty, lev: t.lev, tp, sl });
-    deskNote(r.msg, !r.ok);
-  }
-  saveDesk(); renderDesk();
-}
-
-function bootDesk() {
-  state.deskPct = 25; state.deskType = 'market';
-  el('deskCard').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const d = state.desk, price = deskPrice();
-    if (b.dataset.pct) {
-      state.deskPct = +b.dataset.pct;
-      [...b.parentElement.children].forEach(x => x.classList.toggle('on', x === b));
-      renderTicket(); return;
-    }
-    if (b.dataset.type) {
-      state.deskType = b.dataset.type;
-      [...b.parentElement.children].forEach(x => x.classList.toggle('on', x === b));
-      el('dLimitWrap').style.display = state.deskType === 'limit' ? '' : 'none';
-      return;
-    }
-    if (b.dataset.side) return submitOrder(b.dataset.side === 'long' ? 1 : -1);
-    if (b.dataset.cancel !== undefined) { d.orders.splice(+b.dataset.cancel, 1); saveDesk(); renderDesk(); return; }
-    if (b.dataset.goto) { switchSymbol(b.dataset.goto); return; }
-    const cp = posOf(d, sym());
-    if (!cp && ['close', 'half', 'be', 'plan'].includes(b.dataset.act)) return;
-    if (b.dataset.act === 'close') { deskExit(d, sym(), price, 1, 'manual close'); deskNote('Position closed.'); }
-    if (b.dataset.act === 'half') { deskExit(d, sym(), price, 0.5, 'manual close'); deskNote('Half closed.'); }
-    if (b.dataset.act === 'be') { cp.sl = cp.entry; deskNote('Stop moved to entry.'); }
-    if (b.dataset.act === 'plan') {
-      const a = analyse();
-      if (!a || !a.plan) deskNote('No plan on screen right now.', true);
-      else if (a.plan.bias !== cp.dir) deskNote('The plan points the other way — it would flip you.', true);
-      else { cp.sl = a.plan.stop; cp.tp = a.plan.t2; deskNote('Stop and 2R target copied from the plan.'); }
-    }
-    if (b.id === 'dReset') {
-      state.desk = newDesk(state.account);
-      deskNote('Desk reset to $' + fmt0(state.account) + '.');
-    }
-    saveDesk(); renderDesk();
-  });
-  ['dLev', 'dTp', 'dSl', 'dLimit'].forEach(id => el(id).addEventListener('input', renderTicket));
-  store.get(DESK_KEY).then(saved => {
-    if (saved && typeof saved.balance === 'number') {
-      if (!saved.positions) {                       /* upgrade a desk saved before multi-symbol */
-        saved.positions = saved.pos ? { BTCUSDT: { ...saved.pos, symbol: 'BTCUSDT' } } : {};
-        delete saved.pos;
-        (saved.orders || []).forEach(o => { o.symbol = o.symbol || 'BTCUSDT'; });
-        (saved.history || []).forEach(t => { t.symbol = t.symbol || 'BTCUSDT'; });
-      }
-      state.desk = saved;
-    } else state.desk = newDesk(state.account);
-    renderDesk();
-  });
-}
-
 function switchSymbol(id) {
   if (id === state.sym) return;
   state.sym = id;
@@ -1534,11 +1075,9 @@ function switchSymbol(id) {
   renderSymbolTabs();
   el('symName').textContent = label(id) + 'USDT.P';
   paintHeader();                              /* repoint price and stats before data lands */
-  ['dLimit', 'dTp', 'dSl'].forEach(x => { el(x).value = ''; });
   const cached = state.candles[ck(id, state.tf)];
   if (cached) { const a = analyse(); if (a) { render(a); if (!state.noChart) paintChart(a); } }
   else { el('verdict').textContent = 'Loading'; el('signals').innerHTML = ''; }
-  renderDesk();
   refresh(true);
 }
 
@@ -1576,7 +1115,6 @@ function boot() {
     const a = analyse(); if (a) render(a);
   });
   el('reload').addEventListener('click', () => refresh(true));
-  bootDesk();
   try { initChart(); } catch (e) { console.error('chart unavailable', e); state.noChart = true; }
   connectWs();
   refresh(true);
