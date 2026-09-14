@@ -75,8 +75,10 @@ header.top{
 .stat{display:flex;flex-direction:column;gap:2px}
 .stat .k{font-size:10px;color:var(--faint)}
 .stat .v{font-size:12px;font-family:var(--mono);color:var(--txt)}
-#tfs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:7px;overflow:hidden}
-#tfs button{background:none;border:0;color:var(--dim);font:inherit;font-size:12px;padding:6px 13px;cursor:pointer}
+#tfs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:7px;
+     overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#tfs::-webkit-scrollbar{display:none}
+#tfs button{background:none;border:0;color:var(--dim);font:inherit;font-size:12px;padding:6px 13px;cursor:pointer;flex-shrink:0}
 #tfs button.on{background:var(--panel2);color:var(--txt);box-shadow:inset 0 -2px 0 var(--blue)}
 #tfs button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .status{font-size:11px;font-family:var(--mono);padding:4px 9px;border-radius:20px;border:1px solid var(--line)}
@@ -562,11 +564,21 @@ function qtyDp(id) {
   return t.includes('.') ? t.split('.')[1].replace(/0+$/, '').length : 0;
 }
 const TFS = [
+  { id: '5', label: '5m', ms: 300000 },
+  { id: '15', label: '15m', ms: 900000 },
   { id: '30', label: '30m', ms: 1800000 },
   { id: '60', label: '1H', ms: 3600000 },
+  { id: '120', label: '2H', ms: 7200000 },
   { id: '240', label: '4H', ms: 14400000 },
+  { id: '720', label: '12H', ms: 43200000 },
   { id: 'D', label: '1D', ms: 86400000 }
 ];
+/* Multi-timeframe alignment panel deliberately stays anchored to this
+   original set, not the full TFS list above — 5m/15m are noisy enough
+   that folding them into the "do all timeframes agree" check would make
+   full alignment rare to the point of not meaning much, which isn't what
+   adding more selectable granularity was asking for. */
+const MTF_TFS = TFS.filter(t => ['30', '60', '240', 'D'].includes(t.id));
 const state = {
   sym: 'BTCUSDT', tf: '240',
   candles: {},                       /* keyed `${symbol}:${tf}` */
@@ -765,7 +777,7 @@ function analyse(symbolId, tfId) {
   }
 
   /* --- multi timeframe alignment --- */
-  const mtf = TFS.map(t => {
+  const mtf = MTF_TFS.map(t => {
     const cc2 = state.candles[ck(symbolId, t.id)];
     if (!cc2 || cc2.length < 210) return { tf: t.label, dir: 0, txt: '—' };
     const kk = cc2.slice(0, -1), j = kk.length - 1, cl = kk.map(x => x.c);
@@ -1313,6 +1325,10 @@ function connectWs() {
 
 /* tfId is optional — pass it (e.g. from a notification tap) to jump straight
    to that timeframe at the same time as the symbol, in one refresh. */
+function scrollTfIntoView() {
+  const on = el('tfs').querySelector('button.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
 function switchSymbol(id, tfId) {
   const symChanged = id !== state.sym;
   const tfChanged = tfId !== undefined && tfId !== state.tf;
@@ -1321,6 +1337,7 @@ function switchSymbol(id, tfId) {
   if (tfChanged) {
     state.tf = tfId;
     [...el('tfs').children].forEach(x => x.classList.toggle('on', x.dataset.tf === tfId));
+    scrollTfIntoView();
   }
   state.oi = []; state.book = null; state.tape = null; state.ratio = null;
   renderSymbolTabs();
@@ -1344,6 +1361,7 @@ function boot() {
   });
   el('tfs').innerHTML = TFS.map(t =>
     `<button data-tf="${t.id}" class="${t.id === state.tf ? 'on' : ''}">${t.label}</button>`).join('');
+  scrollTfIntoView();   /* the default TF can start scrolled out of view now that there are 8 */
   el('tfs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     state.tf = b.dataset.tf;
