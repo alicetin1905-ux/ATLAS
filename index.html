@@ -6,14 +6,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>ATLAS — Bybit perps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Palette + typography matched to BTCLiveBoard ("the first page") so all 4
+   apps in this family read as one system. --blue is ATLAS-specific (no
+   equivalent slot on the reference page) and stays as it was. */
 :root{
-  --bg:#070a0f; --panel:#0d131b; --panel2:#111925; --line:#1a2534; --line2:#243244;
-  --txt:#d7e1ee; --dim:#78889d; --faint:#4e5c6e;
-  --up:#0ecb81; --dn:#f6465d; --nt:#f0b90b; --blue:#4d9fff;
-  --trend-glow: rgba(240,185,11,0.04);  /* BTC's own live trend, not the coin currently on screen */
-  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  --bg:#070a09; --panel:#0e1412; --panel2:#121a17; --line:#1b2320; --line2:#2a3630;
+  --txt:#eef4f0; --dim:#7c8f87; --faint:#4a5852;
+  --up:#35ffb0; --dn:#ff4d6a; --nt:#ffc857; --blue:#4d9fff;
+  --trend-glow: rgba(255,200,87,0.04);  /* BTC's own live trend, not the coin currently on screen */
+  --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --sans:'Inter',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
@@ -210,9 +216,9 @@ footer b{color:var(--dim);font-weight:400}
       <div class="verdict-card">
         <svg class="gauge" viewBox="0 0 260 150" aria-hidden="true">
           <path d="M42 118 A88 88 0 0 1 218 118" fill="none" stroke="#1a2534" stroke-width="10" stroke-linecap="round"/>
-          <path id="fillNeg" d="M130 30 A88 88 0 0 0 42 118" fill="none" stroke="#f6465d" stroke-width="10"
+          <path id="fillNeg" d="M130 30 A88 88 0 0 0 42 118" fill="none" stroke="#ff4d6a" stroke-width="10"
                 stroke-linecap="round" stroke-dasharray="0 999"/>
-          <path id="fillPos" d="M130 30 A88 88 0 0 1 218 118" fill="none" stroke="#0ecb81" stroke-width="10"
+          <path id="fillPos" d="M130 30 A88 88 0 0 1 218 118" fill="none" stroke="#35ffb0" stroke-width="10"
                 stroke-linecap="round" stroke-dasharray="0 999"/>
           <text x="36" y="140" fill="#4e5c6e" font-size="10" font-family="monospace">short</text>
           <text x="196" y="140" fill="#4e5c6e" font-size="10" font-family="monospace">long</text>
@@ -249,7 +255,7 @@ footer b{color:var(--dim);font-weight:400}
     <div class="card chart-card">
       <div class="chart-legend">
         <span><i style="background:#4d9fff"></i>EMA 20</span>
-        <span><i style="background:#f0b90b"></i>EMA 50</span>
+        <span><i style="background:#ffc857"></i>EMA 50</span>
         <span><i style="background:#b06bff"></i>EMA 200</span>
         <span><i style="background:#5d7186"></i>Chandelier 4/2</span>
       </div>
@@ -848,14 +854,14 @@ function initChart() {
   sVol = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   sCandle = chart.addCandlestickSeries({
-    upColor: '#0ecb81', downColor: '#f6465d', borderVisible: false,
-    wickUpColor: '#0ecb81', wickDownColor: '#f6465d'
+    upColor: '#35ffb0', downColor: '#ff4d6a', borderVisible: false,
+    wickUpColor: '#35ffb0', wickDownColor: '#ff4d6a'
   });
   const line = (color, w, dashed) => chart.addLineSeries({
     color, lineWidth: w, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
     lineStyle: dashed ? 2 : 0
   });
-  sE20 = line('#4d9fff', 1); sE50 = line('#f0b90b', 1); sE200 = line('#b06bff', 2);
+  sE20 = line('#4d9fff', 1); sE50 = line('#ffc857', 1); sE200 = line('#b06bff', 2);
   sCE = line('#5d7186', 1, true);
   new ResizeObserver(() => chart.applyOptions({ width: box.clientWidth, height: box.clientHeight })).observe(box);
 }
@@ -875,9 +881,9 @@ function paintChart(a) {
   const marks = [];
   for (let i = 1; i < a.k.length; i++) {
     if (a.ce.dir[i] === 1 && a.ce.dir[i - 1] === -1)
-      marks.push({ time: sec(a.k[i].t), position: 'belowBar', color: '#0ecb81', shape: 'arrowUp', text: 'CE' });
+      marks.push({ time: sec(a.k[i].t), position: 'belowBar', color: '#35ffb0', shape: 'arrowUp', text: 'CE' });
     if (a.ce.dir[i] === -1 && a.ce.dir[i - 1] === 1)
-      marks.push({ time: sec(a.k[i].t), position: 'aboveBar', color: '#f6465d', shape: 'arrowDown', text: 'CE' });
+      marks.push({ time: sec(a.k[i].t), position: 'aboveBar', color: '#ff4d6a', shape: 'arrowDown', text: 'CE' });
   }
   sCandle.setMarkers(marks.slice(-40));
 }
@@ -931,7 +937,7 @@ function render(a) {
   el('scoreNum').className = 'score-num ' + cls(vd);
   const ARC = Math.PI * 88 / 2;           /* length of one quarter arc */
   el('needle').setAttribute('transform', `rotate(${(s / 100) * 90} 130 118)`);
-  const colour = vd === 1 ? '#0ecb81' : vd === -1 ? '#f6465d' : '#f0b90b';
+  const colour = vd === 1 ? '#35ffb0' : vd === -1 ? '#ff4d6a' : '#ffc857';
   const pos = el('fillPos'), neg = el('fillNeg');
   pos.setAttribute('stroke-dasharray', `${s > 0 ? Math.min(s, 100) / 100 * ARC : 0} 999`);
   neg.setAttribute('stroke-dasharray', `${s < 0 ? Math.min(-s, 100) / 100 * ARC : 0} 999`);
