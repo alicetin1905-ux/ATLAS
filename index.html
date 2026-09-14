@@ -1267,12 +1267,16 @@ async function refresh(full) {
 /* live price over websocket */
 function connectWs() {
   let ws;
+  let wsOpenedAt = 0, lastTickAt = 0, staleKicked = false;
   const open = () => {
     ws = new WebSocket('wss://stream.bybit.com/v5/public/linear');
+    wsOpenedAt = Date.now();
+    staleKicked = false;
     ws.onopen = () => ws.send(JSON.stringify({ op: 'subscribe', args: SYMBOLS.map(x => `tickers.${x.id}`) }));
     ws.onmessage = (ev) => {
       const m = JSON.parse(ev.data);
       if (!m.data || !m.data.lastPrice || !m.topic) return;
+      lastTickAt = Date.now();
       const id = m.topic.split('.')[1];
       const p = +m.data.lastPrice;
       const prev = state.lives[id];
@@ -1290,6 +1294,20 @@ function connectWs() {
     ws.onerror = () => ws.close();
   };
   open();
+  /* Watchdog: the socket can complete its handshake and even ack the
+     subscribe while never actually delivering a single tick afterwards
+     (found and fixed on BTCLiveBoard — same batched-subscribe shape here).
+     ws.onclose alone can't catch that since the socket never closes on its
+     own in that state, so nothing else would ever trigger a reconnect. */
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN || staleKicked) return;
+    const lastAny = lastTickAt || wsOpenedAt;
+    if (lastAny && Date.now() - lastAny > 15000) {
+      staleKicked = true;
+      console.warn('ATLAS WS: no ticker data for ' + Math.round((Date.now() - lastAny) / 1000) + 's on an open socket — forcing reconnect');
+      try { ws.close(); } catch (e) {}
+    }
+  }, 5000);
 }
 
 
