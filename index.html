@@ -787,9 +787,10 @@ function analyse(symbolId, tfId) {
   /* --- trade plan --- */
   const a14 = atr(k, 14)[i];
   const bias = score >= 25 ? 1 : score <= -25 ? -1 : 0;
+  trackFlipEntry(symbolId, tfId, bias, price);
   let plan = null;
   if (bias !== 0) {
-    const entry = price;
+    const entry = flipEntryPrice(symbolId, tfId, price);
     let stop = bias === 1 ? entry - 1.5 * a14 : entry + 1.5 * a14;
     if (bias === 1 && ce.dir[i] === 1 && ce.longStop[i] < entry) stop = Math.min(stop, ce.longStop[i]);
     if (bias === -1 && ce.dir[i] === -1 && ce.shortStop[i] > entry) stop = Math.max(stop, ce.shortStop[i]);
@@ -1040,6 +1041,46 @@ const WATCH_KEY = 'atlas-watch-v1';
 const watch = { on: false, sys: false, last: {} };
 const watchKey = (s, t) => `${s}:${t}`;
 
+/* Trade plan's entry price: fixed to whatever price it was AT the moment
+   the verdict flipped into Long/Short, not left tracking the live price
+   forever (a "trade plan" whose entry keeps sliding to the current price
+   isn't a plan). Keyed the same way as `watch`, so it updates from every
+   analyse() call regardless of whether that's the user's active chart or
+   the background scanner — one flip-detection choke point, both paths. */
+const FLIP_KEY = 'atlas-flip-v1';
+let flipEntries = {};
+function flipLoad() {
+  try {
+    const j = JSON.parse(localStorage.getItem(FLIP_KEY) || '{}');
+    if (j && typeof j === 'object') flipEntries = j;
+  } catch (e) {}
+}
+function flipSave() {
+  try { localStorage.setItem(FLIP_KEY, JSON.stringify(flipEntries)); } catch (e) {}
+}
+function trackFlipEntry(symbolId, tfId, bias, price) {
+  const key = watchKey(symbolId, tfId);
+  const prev = flipEntries[key];
+  if (bias !== 0 && (!prev || prev.bias !== bias)) {
+    flipEntries[key] = { bias, price };
+    flipSave();
+  } else if (bias === 0 && prev) {
+    /* back to Stand aside — clear it, so the NEXT flip into Long or Short
+       (even the same direction as before) is captured as a fresh entry
+       rather than quietly reusing a stale one. */
+    delete flipEntries[key];
+    flipSave();
+  }
+}
+/* Falls back to the current price only when no flip has been observed yet
+   for this symbol/timeframe since the app loaded (e.g. it was already
+   Long/Short the first time analyse() ran here) — there's no way to know
+   the real historical flip price without rescoring every past candle. */
+function flipEntryPrice(symbolId, tfId, price) {
+  const e = flipEntries[watchKey(symbolId, tfId)];
+  return e ? e.price : price;
+}
+
 function watchLoad() {
   try {
     const j = JSON.parse(localStorage.getItem(WATCH_KEY) || '{}');
@@ -1251,6 +1292,7 @@ function switchSymbol(id, tfId) {
 /* ---------------- boot ---------------- */
 function boot() {
   watchLoad();
+  flipLoad();
   paintWatchUi();
   el('watchBtn').addEventListener('click', toggleWatch);
   renderSymbolTabs();
