@@ -11,26 +11,23 @@
   --bg:#070a0f; --panel:#0d131b; --panel2:#111925; --line:#1a2534; --line2:#243244;
   --txt:#d7e1ee; --dim:#78889d; --faint:#4e5c6e;
   --up:#0ecb81; --dn:#f6465d; --nt:#f0b90b; --blue:#4d9fff;
-  --signal-soft: rgba(240,185,11,0.08);
+  --trend-glow: rgba(240,185,11,0.04);  /* BTC's own live trend, not the coin currently on screen */
   --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
 }
-body.state-long{ --signal-soft: rgba(14,203,129,0.10); }
-body.state-short{ --signal-soft: rgba(246,70,93,0.10); }
-body.state-flat{ --signal-soft: rgba(240,185,11,0.08); }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
 body{padding:0 0 env(safe-area-inset-bottom);position:relative}
 
-/* ambient aurora wash — same soft top/bottom glow + scanline texture as
-   BTCLiveBoard, shifting colour with the current verdict (see render()).
-   Fixed + negative z-index so it sits behind everything without needing
-   every element re-tagged. */
+/* ambient aurora wash — carries BTC's own live trend (green=long/red=short,
+   brighter the stronger the trend), independent of whatever symbol tab is
+   active (see refreshTrendGlow()). Fixed + negative z-index so it sits
+   behind everything without needing every element re-tagged. */
 .wash{
   position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(ellipse 130% 80% at 50% -10%, var(--signal-soft), transparent 60%),
-    radial-gradient(ellipse 120% 70% at 50% 110%, var(--signal-soft), transparent 62%);
+    radial-gradient(ellipse 130% 80% at 50% -10%, var(--trend-glow), transparent 60%),
+    radial-gradient(ellipse 120% 70% at 50% 110%, var(--trend-glow), transparent 62%);
   transition:background 1.4s ease;
 }
 .scanlines{
@@ -928,7 +925,6 @@ function render(a) {
   const s = a.score;
   const verdict = verdictLabel(s);
   const vd = verdictDir(s);
-  document.body.className = vd === 1 ? 'state-long' : vd === -1 ? 'state-short' : 'state-flat';
   el('verdict').textContent = verdict;
   el('verdict').className = 'verdict ' + cls(vd);
   el('scoreNum').textContent = (s > 0 ? '+' : '') + s;
@@ -1079,6 +1075,29 @@ function trackFlipEntry(symbolId, tfId, bias, price) {
 function flipEntryPrice(symbolId, tfId, price) {
   const e = flipEntries[watchKey(symbolId, tfId)];
   return e ? e.price : price;
+}
+
+/* ---------------- background wash: BTC's own live trend ----------------
+   Fetches BTC 1H candles on its own schedule, independent of whichever
+   symbol/timeframe tab is active, so the aurora always reflects BTC —
+   direction from price vs EMA200, intensity from how many ATRs price has
+   stretched away from it (saturates at 4 ATRs). */
+async function refreshTrendGlow() {
+  try {
+    const k = await getKlines('BTCUSDT', '60', 250);
+    if (k.length < 210) return;
+    const close = k.map(x => x.c);
+    const i = k.length - 1;
+    const emaNow = ema(close, 200)[i];
+    const atrNow = atr(k, 14)[i];
+    if (!nn(emaNow) || !nn(atrNow) || atrNow <= 0) return;
+    const price = close[i];
+    const dir = price >= emaNow ? 1 : -1;
+    const strength = Math.max(0, Math.min(1, Math.abs(price - emaNow) / (atrNow * 4)));
+    const rgb = dir === 1 ? '53,255,176' : '255,77,106';
+    const alpha = (0.03 + strength * 0.15).toFixed(3);
+    document.documentElement.style.setProperty('--trend-glow', `rgba(${rgb},${alpha})`);
+  } catch (e) { /* keep whatever glow was already showing */ }
 }
 
 function watchLoad() {
@@ -1335,6 +1354,9 @@ function boot() {
 
   if (watch.on) setTimeout(scanAll, 4000);   /* stagger past the initial page load */
   setInterval(scanAll, 60000);
+
+  refreshTrendGlow();
+  setInterval(refreshTrendGlow, 60000);
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', boot) : boot();
 })();
