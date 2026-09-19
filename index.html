@@ -563,7 +563,8 @@ const TFS = [
   { id: '120', label: '2H', ms: 7200000 },
   { id: '240', label: '4H', ms: 14400000 },
   { id: '720', label: '12H', ms: 43200000 },
-  { id: 'D', label: '1D', ms: 86400000 }
+  { id: 'D', label: '1D', ms: 86400000 },
+  { id: 'W', label: '1W', ms: 604800000 }
 ];
 /* Multi-timeframe alignment panel deliberately stays anchored to this
    original set, not the full TFS list above — 5m/15m are noisy enough
@@ -1229,7 +1230,7 @@ function boot() {
   });
   el('tfs').innerHTML = TFS.map(t =>
     `<button data-tf="${t.id}" class="${t.id === state.tf ? 'on' : ''}">${t.label}</button>`).join('');
-  scrollTfIntoView();   /* the default TF can start scrolled out of view now that there are 8 */
+  scrollTfIntoView();   /* the default TF can start scrolled out of view now that there are 9 */
   el('tfs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     state.tf = b.dataset.tf;
