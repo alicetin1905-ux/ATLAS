@@ -679,9 +679,9 @@ function analyse(symbolId, tfId) {
   const r14 = rsi(close, 14);
   add('Momentum', 'RSI 14', r14[i].toFixed(1), r14[i] > 55 ? 1 : r14[i] < 45 ? -1 : 0, 6,
     r14[i] > 70 ? 'overbought' : r14[i] < 30 ? 'oversold' : '');
-  const md = macd(close, 12, 26, 9);
+  const md = macd(close, 5, 35, 5);
   const mdDir = md.line[i] > md.signal[i] ? 1 : -1;
-  add('Momentum', 'MACD 12/26/9', `hist ${md.hist[i].toFixed(1)} · ${mdDir === 1 ? 'above signal' : 'below signal'}`,
+  add('Momentum', 'MACD 5/35/5', `hist ${md.hist[i].toFixed(1)} · ${mdDir === 1 ? 'above signal' : 'below signal'}`,
     (md.hist[i] > 0 ? 1 : -1) === mdDir ? mdDir : 0, 7);
   const sr = stochRsi(close, 14, 14, 3, 3);
   add('Momentum', 'Stoch RSI', `K ${sr.k[i].toFixed(0)} / D ${sr.d[i].toFixed(0)}`,
