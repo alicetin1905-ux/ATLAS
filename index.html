@@ -543,7 +543,10 @@ const API = 'https://api.bybit.com';
 const SYMBOLS = [
   { id: 'BTCUSDT', label: 'BTC' }, { id: 'ETHUSDT', label: 'ETH' }, { id: 'SOLUSDT', label: 'SOL' },
   { id: 'XRPUSDT', label: 'XRP' }, { id: 'BNBUSDT', label: 'BNB' }, { id: 'DOGEUSDT', label: 'DOGE' },
-  { id: 'HYPEUSDT', label: 'HYPE' }, { id: 'SUIUSDT', label: 'SUI' }, { id: 'ENAUSDT', label: 'ENA' }
+  { id: 'HYPEUSDT', label: 'HYPE' }, { id: 'SUIUSDT', label: 'SUI' }, { id: 'ENAUSDT', label: 'ENA' },
+  { id: 'ADAUSDT', label: 'ADA' }, { id: 'XLMUSDT', label: 'XLM' }, { id: 'BCHUSDT', label: 'BCH' },
+  { id: 'NEARUSDT', label: 'NEAR' }, { id: 'UNIUSDT', label: 'UNI' }, { id: 'LTCUSDT', label: 'LTC' },
+  { id: 'AVAXUSDT', label: 'AVAX' }, { id: 'HBARUSDT', label: 'HBAR' }, { id: 'SHIB1000USDT', label: 'SHIB' }
 ];
 const sym = () => state.sym;
 const label = (id) => (SYMBOLS.find(s => s.id === id) || { label: id }).label;
