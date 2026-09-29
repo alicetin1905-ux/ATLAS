@@ -897,31 +897,62 @@ const money = (x) => `${x < 0 ? '-' : '+'}$${Math.abs(x).toFixed(2)}`;
 const pct = (x, dp) => `${x < 0 ? '' : '+'}${x.toFixed(dp === undefined ? 1 : dp)}%`;
 const el = (id) => document.getElementById(id);
 
+/* Tile scores are a glance, so they're cached: a coin is re-scored when its
+   candles change, and otherwise at most every TILE_RESCORE_MS for the live
+   price, a few coins per pass. Running analyse() for every coin on every
+   WS tick (dozens a second) froze the page and swallowed taps. The active
+   coin's tile takes the main view's own score, so the two always agree. */
+const TILE_RESCORE_MS = 6000, TILE_RESCORE_PER_PASS = 4;
+const tileScores = {};                     /* `${symbol}:${tf}` -> { score, at, c } */
+function noteTileScore(id, a) {
+  const key = ck(id, state.tf);
+  tileScores[key] = { score: a ? a.score : null, at: Date.now(), c: state.candles[key] };
+}
+function tileScore(id, budget) {
+  const key = ck(id, state.tf), c = state.candles[key], hit = tileScores[key];
+  if (!c) return null;
+  const fresh = hit && hit.c === c;
+  if (fresh && (id === sym() || Date.now() - hit.at < TILE_RESCORE_MS || budget.n <= 0)) return hit.score;
+  if (fresh) budget.n--;                   /* only price-age rescoring is rationed; new candles always score */
+  noteTileScore(id, analyse(id, state.tf));
+  return tileScores[key].score;
+}
+
+/* Tiles are built once and then updated in place: rebuilding the buttons
+   on every tick replaced them under the user's finger mid-tap. */
 function renderSymbolTabs() {
   const bar = el('syms'); if (!bar) return;
-  bar.innerHTML = SYMBOLS.map(x => {
+  tilesQueued = false;
+  if (bar.children.length !== SYMBOLS.length) {
+    bar.innerHTML = SYMBOLS.map(x => `<button data-sym="${x.id}">
+      <div class="row1"><b>${x.label}</b><span class="sc"></span></div>
+      <span class="sp">—</span>
+      <div class="score"><span class="lbl">score</span><span class="val">—</span></div>
+    </button>`).join('');
+  }
+  const budget = { n: TILE_RESCORE_PER_PASS };
+  SYMBOLS.forEach((x, i) => {
+    const b = bar.children[i];
     const t = state.tickers[x.id];
     const p = state.lives[x.id] || (t ? +t.lastPrice : null);
     const ch = t ? +t.price24hPcnt * 100 : null;
-    // Same analyse() the active symbol's own score comes from, just run
-    // here for every tile — null (renders as "—") until that symbol's own
-    // candles have loaded in the background (see refresh()).
-    const a = analyse(x.id, state.tf);
-    const scoreTxt = a ? (a.score > 0 ? '+' : '') + a.score : '—';
-    const scoreCls = a ? cls(verdictDir(a.score)) : '';
-    const hot = !a ? '' : a.score >= 50 ? ' hot-up' : a.score <= -50 ? ' hot-dn' : '';
-    // Tiles are rebuilt on every tick; a negative delay tied to the clock keeps
-    // the pulse phase continuous instead of restarting it on each rebuild.
-    const phase = hot ? ` style="animation-delay:-${Date.now() % 1400}ms"` : '';
-    return `<button data-sym="${x.id}" class="${x.id === sym() ? 'on' : ''}${hot}"${phase}>
-      <div class="row1">
-        <b>${x.label}</b>
-        <span class="sc ${ch === null ? '' : cls(ch)}">${ch === null ? '' : (ch > 0 ? '+' : '') + ch.toFixed(2) + '%'}</span>
-      </div>
-      <span class="sp">${p === null ? '—' : fmt(p, x.id)}</span>
-      <div class="score ${scoreCls}"><span class="lbl">score</span><span class="val">${scoreTxt}</span></div>
-    </button>`;
-  }).join('');
+    const score = tileScore(x.id, budget);
+    const hot = score === null ? '' : score >= 50 ? 'hot-up' : score <= -50 ? 'hot-dn' : '';
+    b.className = [x.id === sym() ? 'on' : '', hot].filter(Boolean).join(' ');
+    const sc = b.querySelector('.sc');
+    sc.className = 'sc ' + (ch === null ? '' : cls(ch));
+    sc.textContent = ch === null ? '' : (ch > 0 ? '+' : '') + ch.toFixed(2) + '%';
+    b.querySelector('.sp').textContent = p === null ? '—' : fmt(p, x.id);
+    b.querySelector('.score').className = 'score ' + (score === null ? '' : cls(verdictDir(score)));
+    b.querySelector('.score .val').textContent = score === null ? '—' : (score > 0 ? '+' : '') + score;
+  });
+}
+/* WS ticks only queue a tile pass; at most a few per second actually run. */
+let tilesQueued = false;
+function queueTiles() {
+  if (tilesQueued) return;
+  tilesQueued = true;
+  setTimeout(renderSymbolTabs, 300);
 }
 
 /* ---------------- chart ---------------- */
@@ -1007,6 +1038,7 @@ function verdictLabel(s) {
 function verdictDir(s) { return s >= 25 ? 1 : s <= -25 ? -1 : 0; }
 
 function render(a) {
+  noteTileScore(sym(), a);
   paintHeader();
   if (!a) return;
 
@@ -1181,11 +1213,16 @@ async function refreshTrendGlow() {
   } catch (e) { /* keep whatever glow was already showing */ }
 }
 
-/* ---------------- refresh loop ---------------- */
+/* ---------------- refresh loop ----------------
+   Two stages. The active coin (its candles, ticker and flow data) is fetched
+   and shown first; every other coin's ticker and candles for the tiles load
+   after, in the background, without holding up the main view. A refresh
+   asked for while one is running (a tap on a tile or timeframe) is queued,
+   not dropped. */
 async function refresh(full) {
-  if (state.busy) return;
+  if (state.busy) { state.again = state.again === 'full' || full ? 'full' : 'quick'; return; }
   state.busy = true;
-  const S = sym();
+  const S = sym(), T = state.tf;
   el('status').className = 'status loading';
   el('status').textContent = 'syncing';
   /* flow data is stored unkeyed for the active symbol, so drop any
@@ -1200,25 +1237,10 @@ async function refresh(full) {
       api(`/v5/market/recent-trade?category=linear&symbol=${S}&limit=500`)
         .then(mine(r => { state.tape = r.list; })).catch(mine(() => { state.tape = null; })),
       api(`/v5/market/account-ratio?category=linear&symbol=${S}&period=1h&limit=1`)
-        .then(mine(r => { state.ratio = r.list[0]; })).catch(mine(() => { state.ratio = null; }))
+        .then(mine(r => { state.ratio = r.list[0]; })).catch(mine(() => { state.ratio = null; })),
+      api(`/v5/market/tickers?category=linear&symbol=${S}`)
+        .then(r => { state.tickers[S] = r.list[0]; if (!state.lives[S]) state.lives[S] = +r.list[0].lastPrice; }).catch(() => { })
     ];
-    /* every symbol's ticker, so the tabs show live prices for all of them */
-    SYMBOLS.forEach(x => {
-      if (x.id !== S && state.tickers[x.id] && !full) return;
-      jobs.push(api(`/v5/market/tickers?category=linear&symbol=${x.id}`)
-        .then(r => { state.tickers[x.id] = r.list[0]; if (!state.lives[x.id]) state.lives[x.id] = +r.list[0].lastPrice; }).catch(() => { }));
-    });
-    /* every OTHER symbol's candles at the current tf (+ daily, for the pivot
-       signal) so the tiles can run the same analyse() score everyone else's
-       tab uses, not just the active symbol. Gated to full refreshes only —
-       these tiles are a glance, not a live chart, and re-fetching nine
-       symbols' history every 20s would be needless load. */
-    SYMBOLS.forEach(x => {
-      if (x.id === S) return;
-      if (!full && state.candles[ck(x.id, state.tf)]) return;
-      jobs.push(getKlines(x.id, state.tf, 500).then(k => { state.candles[ck(x.id, state.tf)] = k; }));
-      jobs.push(getKlines(x.id, 'D', 400).then(k => { state.candles[ck(x.id, 'D')] = k; }));
-    });
     if (!state.insts[S]) {
       jobs.push(api(`/v5/market/instruments-info?category=linear&symbol=${S}`)
         .then(r => {
@@ -1226,16 +1248,19 @@ async function refresh(full) {
           state.insts[S] = { ...i.lotSizeFilter, tick: i.priceFilter.tickSize };
         }).catch(() => { }));
     }
-    if (full || !state.candles[ck(S, state.tf)]) {
-      TFS.forEach(t => jobs.push(getKlines(S, t.id, t.id === 'D' ? 400 : 500)
-        .then(k => { state.candles[ck(S, t.id)] = k; })));
-    } else {
-      jobs.push(getKlines(S, state.tf, 500).then(k => { state.candles[ck(S, state.tf)] = k; }));
-    }
+    /* the active coin: every timeframe on a full refresh or when missing (the
+       MTF read and quick timeframe switching need them), else just the one
+       on screen */
+    TFS.forEach(t => {
+      if (!full && t.id !== T && state.candles[ck(S, t.id)]) return;
+      jobs.push(getKlines(S, t.id, t.id === 'D' ? 400 : 500).then(k => { state.candles[ck(S, t.id)] = k; }));
+    });
     await Promise.all(jobs);
-    const a = analyse();
-    render(a);
-    if (a && !state.noChart) { try { paintChart(a); } catch (e) { state.noChart = true; } }
+    if (sym() === S && state.tf === T) {
+      const a = analyse();
+      render(a);
+      if (a && !state.noChart) { try { paintChart(a); } catch (e) { state.noChart = true; } }
+    }
     renderSymbolTabs();
     state.lastUpdate = Date.now();
     el('status').className = 'status ok';
@@ -1247,6 +1272,35 @@ async function refresh(full) {
   } finally {
     state.busy = false;
   }
+  refreshTiles(full);
+  if (state.again) { const f = state.again === 'full'; state.again = null; refresh(f); }
+}
+
+/* Background stage: every other coin's ticker, and its candles at the
+   current timeframe (+ daily, for the pivot signal) so each tile can run
+   the same analyse() score. History is only re-fetched on full refreshes;
+   otherwise just what a tile is missing. One batch at a time. */
+async function refreshTiles(full) {
+  if (state.tilesBusy) return;
+  state.tilesBusy = true;
+  const T = state.tf, jobs = [];
+  SYMBOLS.forEach(x => {
+    if (x.id === sym()) return;
+    if (full || !state.tickers[x.id]) {
+      jobs.push(api(`/v5/market/tickers?category=linear&symbol=${x.id}`)
+        .then(r => { state.tickers[x.id] = r.list[0]; if (!state.lives[x.id]) state.lives[x.id] = +r.list[0].lastPrice; }).catch(() => { }));
+    }
+    if (full || !state.candles[ck(x.id, T)]) {
+      jobs.push(getKlines(x.id, T, 500).then(k => { state.candles[ck(x.id, T)] = k; queueTiles(); }).catch(() => { }));
+    }
+    if (full || !state.candles[ck(x.id, 'D')]) {
+      jobs.push(getKlines(x.id, 'D', 400).then(k => { state.candles[ck(x.id, 'D')] = k; }).catch(() => { }));
+    }
+  });
+  try { await Promise.all(jobs); } finally { state.tilesBusy = false; }
+  renderSymbolTabs();
+  /* the timeframe changed while this batch ran: fill in the new one */
+  if (state.tf !== T) refreshTiles(false);
 }
 
 /* live price over websocket */
@@ -1273,7 +1327,7 @@ function connectWs() {
         e.textContent = fmt(p);
         e.className = 'price ' + state.flash;
       }
-      renderSymbolTabs();
+      queueTiles();
     };
     ws.onclose = () => setTimeout(open, 4000);
     ws.onerror = () => ws.close();
@@ -1302,6 +1356,16 @@ function scrollTfIntoView() {
   const on = el('tfs').querySelector('button.on');
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
+/* paint whatever is already cached for the new coin/timeframe straight away */
+function showCached() {
+  /* move the highlight now; the tile scores follow a moment later so the
+     main view paints first */
+  [...el('syms').children].forEach(x => x.classList.toggle('on', x.dataset.sym === sym()));
+  queueTiles();
+  const cached = state.candles[ck(sym(), state.tf)];
+  if (cached) { const a = analyse(); if (a) { render(a); if (!state.noChart) paintChart(a); return; } }
+  el('verdict').textContent = 'Loading'; el('signals').innerHTML = '';
+}
 function switchSymbol(id, tfId) {
   const symChanged = id !== state.sym;
   const tfChanged = tfId !== undefined && tfId !== state.tf;
@@ -1313,13 +1377,10 @@ function switchSymbol(id, tfId) {
     scrollTfIntoView();
   }
   state.oi = []; state.book = null; state.tape = null; state.ratio = null;
-  renderSymbolTabs();
   el('symName').textContent = label(id) + 'USDT.P';
   paintHeader();                              /* repoint price and stats before data lands */
-  const cached = state.candles[ck(id, state.tf)];
-  if (cached) { const a = analyse(); if (a) { render(a); if (!state.noChart) paintChart(a); } }
-  else { el('verdict').textContent = 'Loading'; el('signals').innerHTML = ''; }
-  refresh(true);
+  showCached();
+  refresh(false);
 }
 
 /* ---------------- boot ---------------- */
@@ -1334,8 +1395,10 @@ function boot() {
   scrollTfIntoView();   /* the default TF can start scrolled out of view now that there are 9 */
   el('tfs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tf === state.tf) return;
     state.tf = b.dataset.tf;
     [...el('tfs').children].forEach(x => x.classList.toggle('on', x === b));
+    showCached();
     refresh(false);
   });
   el('account').addEventListener('input', e => {
