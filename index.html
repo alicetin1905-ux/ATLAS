@@ -1378,12 +1378,26 @@ function switchSymbol(id, tfId) {
   refresh(false);
 }
 
+/* After a tile tap, scroll the Long/Short verdict into view just below the
+   sticky header — on a phone the tile grid pushes it well off screen. */
+function showVerdict() {
+  requestAnimationFrame(() => {
+    const card = document.querySelector('.verdict-card');
+    const head = document.querySelector('header.top');
+    if (!card) return;
+    const top = card.getBoundingClientRect().top + window.scrollY - (head ? head.offsetHeight : 0) - 8;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  });
+}
+
 /* ---------------- boot ---------------- */
 function boot() {
   flipLoad();
   renderSymbolTabs();
   el('syms').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (b) switchSymbol(b.dataset.sym);
+    const b = e.target.closest('button'); if (!b) return;
+    switchSymbol(b.dataset.sym);
+    showVerdict();
   });
   el('tfs').innerHTML = TFS.map(t =>
     `<button data-tf="${t.id}" class="${t.id === state.tf ? 'on' : ''}">${t.label}</button>`).join('');
