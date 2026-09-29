@@ -658,6 +658,9 @@ function analyse(symbolId, tfId) {
   const i = k.length - 1;
   const close = k.map(x => x.c);
   const price = state.lives[symbolId] || k[i].c;
+  /* OI / account ratio / order book / tape are only ever fetched for the
+     active symbol — never let another tile borrow them */
+  const ownFlow = symbolId === state.sym;
   const sig = [];
   const add = (group, name, value, dir, weight, note) => sig.push({ group, name, value, dir, weight, note });
 
@@ -754,7 +757,7 @@ function analyse(symbolId, tfId) {
     else if (f < -0.005) { fDir = -1; }
     add('Flow', 'Funding rate', `${f.toFixed(4)}% / 8h`, fDir, 5, fNote);
   }
-  if (state.oi.length > 5) {
+  if (ownFlow && state.oi.length > 5) {
     const oiNow = +state.oi[state.oi.length - 1].openInterest;
     const oiPrev = +state.oi[0].openInterest;
     const oiChg = (oiNow / oiPrev - 1) * 100;
@@ -766,20 +769,20 @@ function analyse(symbolId, tfId) {
     else if (oiChg < -0.5 && pChg < 0) { dir = 0; note = 'long liquidation flush'; }
     add('Flow', 'Open interest 24h', `${oiChg > 0 ? '+' : ''}${oiChg.toFixed(2)}%`, dir, 5, note);
   }
-  if (state.ratio) {
+  if (ownFlow && state.ratio) {
     const lr = +state.ratio.buyRatio, sr2 = +state.ratio.sellRatio;
     const skew = lr / (lr + sr2);
     add('Flow', 'Account long/short', `${(lr * 100).toFixed(1)}% long`,
       skew > 0.72 ? -1 : skew < 0.45 ? 1 : 0, 3, skew > 0.72 ? 'crowd is heavily long' : '');
   }
-  if (state.book) {
+  if (ownFlow && state.book) {
     const bid = state.book.b.reduce((s, x) => s + +x[1], 0);
     const ask = state.book.a.reduce((s, x) => s + +x[1], 0);
     const imb = (bid - ask) / (bid + ask);
     add('Flow', 'Order book imbalance', `${(imb * 100).toFixed(1)}% ${imb > 0 ? 'bid' : 'ask'}`,
       imb > 0.08 ? 1 : imb < -0.08 ? -1 : 0, 3);
   }
-  if (state.tape) {
+  if (ownFlow && state.tape) {
     const buy = state.tape.filter(t => t.S === 'Buy').reduce((s, t) => s + +t.v, 0);
     const sell = state.tape.filter(t => t.S === 'Sell').reduce((s, t) => s + +t.v, 0);
     const tot = buy + sell, pct = tot ? buy / tot : 0.5;
@@ -1129,14 +1132,19 @@ async function refresh(full) {
   const S = sym();
   el('status').className = 'status loading';
   el('status').textContent = 'syncing';
+  /* flow data is stored unkeyed for the active symbol, so drop any
+     response that lands after the user has already switched away */
+  const mine = (fn) => (v) => { if (sym() === S) fn(v); };
   try {
     const jobs = [
       api(`/v5/market/open-interest?category=linear&symbol=${S}&intervalTime=1h&limit=24`)
-        .then(r => { state.oi = r.list.slice().reverse(); }).catch(() => { state.oi = []; }),
-      api(`/v5/market/orderbook?category=linear&symbol=${S}&limit=200`).then(r => { state.book = r; }).catch(() => { state.book = null; }),
-      api(`/v5/market/recent-trade?category=linear&symbol=${S}&limit=500`).then(r => { state.tape = r.list; }).catch(() => { state.tape = null; }),
+        .then(mine(r => { state.oi = r.list.slice().reverse(); })).catch(mine(() => { state.oi = []; })),
+      api(`/v5/market/orderbook?category=linear&symbol=${S}&limit=200`)
+        .then(mine(r => { state.book = r; })).catch(mine(() => { state.book = null; })),
+      api(`/v5/market/recent-trade?category=linear&symbol=${S}&limit=500`)
+        .then(mine(r => { state.tape = r.list; })).catch(mine(() => { state.tape = null; })),
       api(`/v5/market/account-ratio?category=linear&symbol=${S}&period=1h&limit=1`)
-        .then(r => { state.ratio = r.list[0]; }).catch(() => { state.ratio = null; })
+        .then(mine(r => { state.ratio = r.list[0]; })).catch(mine(() => { state.ratio = null; }))
     ];
     /* every symbol's ticker, so the tabs show live prices for all of them */
     SYMBOLS.forEach(x => {
