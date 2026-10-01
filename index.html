@@ -544,7 +544,7 @@ const MMR = 0.005;          /* Bybit BTCUSDT tier-1 maintenance margin */
 /* ---------------- data layer ---------------- */
 const API = 'https://api.bybit.com';
 const SYMBOLS = [
-  /* same 25 coins TradeBot trades, in its order */
+  /* every coin TradeBot trades, plus earlier picks */
   { id: 'BTCUSDT', label: 'BTC' }, { id: 'ETHUSDT', label: 'ETH' }, { id: 'SOLUSDT', label: 'SOL' },
   { id: 'XRPUSDT', label: 'XRP' }, { id: 'BNBUSDT', label: 'BNB' }, { id: 'DOGEUSDT', label: 'DOGE' },
   { id: 'HYPEUSDT', label: 'HYPE' }, { id: 'SUIUSDT', label: 'SUI' }, { id: 'ENAUSDT', label: 'ENA' },
@@ -553,7 +553,8 @@ const SYMBOLS = [
   { id: 'EGLDUSDT', label: 'EGLD' }, { id: 'NEARUSDT', label: 'NEAR' }, { id: 'XLMUSDT', label: 'XLM' },
   { id: 'BLURUSDT', label: 'BLUR' }, { id: 'SANDUSDT', label: 'SAND' }, { id: 'AXSUSDT', label: 'AXS' },
   { id: 'ZILUSDT', label: 'ZIL' }, { id: 'TRXUSDT', label: 'TRX' }, { id: 'CHZUSDT', label: 'CHZ' },
-  { id: 'POPCATUSDT', label: 'POPCAT' }
+  { id: 'POPCATUSDT', label: 'POPCAT' },
+  { id: 'GRAMUSDT', label: 'GRAM' }, { id: 'AEROUSDT', label: 'AERO' }, { id: '1000PEPEUSDT', label: 'PEPE' }
 ];
 const sym = () => state.sym;
 const label = (id) => (SYMBOLS.find(s => s.id === id) || { label: id }).label;
